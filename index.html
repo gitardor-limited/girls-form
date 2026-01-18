@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Contact Us | G.I.R.Ls.</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+  
+<style>
+:root {
+  --accent:#1a73e8;
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --border:#e6e9ef;
+  --muted:#666;
+  --error:#d93025;
+  --success:#0f9d58;
+}
+
+body { 
+  margin:0; 
+  font-family:Arial, sans-serif; 
+  background:var(--bg); 
+}
+
+.container { 
+  max-width:700px; 
+  margin:30px auto; 
+  padding:20px; 
+  background:var(--card); 
+  border-radius:14px; 
+  border:1px solid var(--border); 
+  box-shadow:0 6px 20px rgba(0,0,0,.05); 
+  position:relative; 
+}
+
+h1 { 
+  color:var(--accent); 
+  margin-bottom:10px;
+}
+
+.subtitle {
+  color:var(--muted);
+  font-size:14px;
+  margin-bottom:25px;
+  line-height:1.5;
+}
+
+#status { 
+  font-size:14px; 
+  color:var(--muted); 
+  margin-bottom:20px; 
+}
+
+form input, form select, form textarea { 
+  display:block; 
+  width:100%; 
+  margin:6px 0 12px 0; 
+  padding:10px; 
+  border-radius:6px; 
+  border:1px solid #ccc; 
+  box-sizing:border-box;
+  font-family:Arial, sans-serif;
+  font-size:14px;
+}
+
+form textarea {
+  min-height:120px;
+  resize:vertical;
+}
+
+form input.error, form select.error, form textarea.error { 
+  border-color:var(--error); 
+}
+
+form input:focus, form select:focus, form textarea:focus {
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(26,115,232,0.1);
+}
+
+form button { 
+  background:var(--accent); 
+  color:#fff; 
+  border:none; 
+  cursor:pointer; 
+  padding:12px 24px; 
+  font-size:16px;
+  width:100%;
+  border-radius:8px;
+  font-weight:bold;
+  transition:opacity 0.2s;
+}
+
+form button:hover { 
+  opacity:0.9; 
+}
+
+form button:disabled { 
+  opacity:0.6; 
+  cursor:not-allowed; 
+}
+
+form label { 
+  display:block; 
+  margin-top:8px; 
+  margin-bottom:4px; 
+  font-weight:500;
+  color:#333;
+}
+
+.form-group { 
+  position:relative; 
+  margin-bottom:12px; 
+}
+
+.error-message {
+  color:var(--error);
+  font-size:13px;
+  margin-top:-8px;
+  margin-bottom:12px;
+  display:block;
+}
+
+.success-message {
+  background:#e6f4ea;
+  border:1px solid #0f9d58;
+  border-radius:8px;
+  padding:16px;
+  margin-bottom:20px;
+  color:#0f9d58;
+  font-weight:500;
+}
+
+#login { 
+  margin-top:20px; 
+}
+
+#logout { 
+  margin-top:30px; 
+  font-size:13px;
+  text-align:center;
+}
+
+#logout a { 
+  color:#555; 
+  text-decoration:none; 
+}
+
+#logout a:hover { 
+  text-decoration:underline; 
+}
+
+.readonly-field {
+  background:#f1f3f4;
+  cursor:not-allowed;
+  color:#5f6368;
+}
+
+@media (max-width: 600px) {
+  .container { 
+    margin:15px; 
+    padding:15px; 
+  }
+  h1 { 
+    font-size:24px; 
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Contact Us</h1>
+  <p class="subtitle">Have a question, feedback, or need support? We're here to help! Please fill out the form below and we'll get back to you as soon as possible.</p>
+  
+  <div id="status">Checking session…</div>
+
+  <div id="login"></div>
+
+  <div id="form-container" style="display:none;"></div>
+
+  <div id="logout" style="display:none;">
+    <a href="#" onclick="signOut();return false;">Sign out</a>
+  </div>
+</div>
+
+<script>
+const CLIENT_ID = "656751987892-s5h4b3h7aq6rl63ut7pl6hgm3d2vr46p.apps.googleusercontent.com";
+const API_URL = "https://script.google.com/macros/s/AKfycbyeKrGPdEFxzq312Z4lnjYKjvhupSL2SkGos1LtzbSmO1YVWWFNpEHY29248uYN_-xHgA/exec";
+const SESSION_DAYS = 30;
+
+let googleLoadRetries = 0;
+const MAX_GOOGLE_RETRIES = 20;
+
+function saveSession(email, firstName, lastName){ 
+  localStorage.setItem("girls_email", email); 
+  localStorage.setItem("girls_firstName", firstName || "");
+  localStorage.setItem("girls_lastName", lastName || "");
+  localStorage.setItem("girls_until", Date.now() + SESSION_DAYS*86400000); 
+}
+
+function getSession(){ 
+  const e = localStorage.getItem("girls_email"); 
+  const u = localStorage.getItem("girls_until"); 
+  if(e && u && Date.now()<+u) {
+    return {
+      email: e,
+      firstName: localStorage.getItem("girls_firstName") || "",
+      lastName: localStorage.getItem("girls_lastName") || ""
+    };
+  }
+  return null; 
+}
+
+function signOut(){ 
+  localStorage.clear(); 
+  location.reload(); 
+}
+
+/* ================= LOAD FORM ================= */
+function loadForm(email, firstName, lastName){
+  const url = `${API_URL}?action=checkContactForm&email=${encodeURIComponent(email)}&firstName=${encodeURIComponent(firstName || "")}&lastName=${encodeURIComponent(lastName || "")}`;
+  
+  document.getElementById("status").textContent = "Loading form...";
+  
+  fetch(url)
+    .then(r => {
+      if (!r.ok) {
+        throw new Error(`HTTP error! status: ${r.status}`);
+      }
+      return r.json();
+    })
+    .then(data => {
+      console.log("Form data:", data);
+      
+      if(data.error) {
+        console.error("API Error:", data.error);
+        throw new Error(data.error);
+      }
+
+      renderForm(email, data);
+    })
+    .catch(err => { 
+      console.error("Fetch Error:", err); 
+      document.getElementById("status").innerHTML = `
+        <span style="color:var(--error);">Failed to load form</span><br>
+        <small style="color:var(--muted);">Error: ${err.message}</small><br>
+        <small style="color:var(--muted);">Please try refreshing the page or contact support if the issue persists.</small>
+      `; 
+    });
+}
+
+/* ================= RENDER FORM ================= */
+function renderForm(email, data){
+  const container = document.getElementById("form-container");
+  container.style.display = "block";
+  document.getElementById("status").style.display = "none";
+  document.getElementById("logout").style.display = "block";
+
+  const inDatabase = data.inDatabase || false;
+  const dbFirstName = data.firstName || "";
+  const dbLastName = data.lastName || "";
+
+  // Determine if fields should be readonly
+  const nameReadonly = inDatabase;
+  const readonlyClass = nameReadonly ? "readonly-field" : "";
+  const readonlyAttr = nameReadonly ? "readonly" : "";
+
+  container.innerHTML = `
+    <form id="contact-form" novalidate>
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="Email" value="${email}" readonly class="readonly-field">
+      </div>
+
+      <div class="form-group">
+        <label for="firstName">First Name</label>
+        <input 
+          type="text" 
+          id="firstName" 
+          name="First Name" 
+          placeholder="First Name" 
+          value="${dbFirstName}" 
+          ${readonlyAttr}
+          class="${readonlyClass}"
+        />
+        <small class="error-message" id="firstName-error" style="display:none;"></small>
+      </div>
+      
+      <div class="form-group">
+        <label for="lastName">Last Name</label>
+        <input 
+          type="text" 
+          id="lastName" 
+          name="Last Name" 
+          placeholder="Last Name" 
+          value="${dbLastName}" 
+          ${readonlyAttr}
+          class="${readonlyClass}"
+        />
+        <small class="error-message" id="lastName-error" style="display:none;"></small>
+      </div>
+
+      <div class="form-group">
+        <label for="type">Type</label>
+        <select id="type" name="Type">
+          <option value="">Select Type</option>
+          <option value="Complaint">Complaint</option>
+          <option value="Feedback">Feedback</option>
+          <option value="Enquiry">Enquiry</option>
+          <option value="Support">Support</option>
+          <option value="Request">Request</option>
+          <option value="Partnership">Partnership</option>
+          <option value="General Inquiry">General Inquiry</option>
+          <option value="Technical Issue">Technical Issue</option>
+          <option value="Billing">Billing</option>
+        </select>
+        <small class="error-message" id="type-error" style="display:none;"></small>
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message</label>
+        <textarea id="message" name="Message" placeholder="Tell us how we can help you..."></textarea>
+        <small class="error-message" id="message-error" style="display:none;"></small>
+      </div>
+
+      <button type="submit">Submit</button>
+    </form>
+  `;
+
+  // Store Google account names for fallback
+  const googleFirstName = data.googleFirstName || "";
+  const googleLastName = data.googleLastName || "";
+
+  // Helper function to show error
+  function showError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById(fieldId + "-error");
+    if (field && errorEl) {
+      field.classList.add("error");
+      errorEl.textContent = message;
+      errorEl.style.display = "block";
+    }
+  }
+
+  // Helper function to clear error
+  function clearError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById(fieldId + "-error");
+    if (field && errorEl) {
+      field.classList.remove("error");
+      errorEl.style.display = "none";
+    }
+  }
+
+  // Clear errors on input
+  document.getElementById("firstName").addEventListener("input", () => clearError("firstName"));
+  document.getElementById("lastName").addEventListener("input", () => clearError("lastName"));
+  document.getElementById("type").addEventListener("change", () => clearError("type"));
+  document.getElementById("message").addEventListener("input", () => clearError("message"));
+
+  const form = document.getElementById("contact-form");
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    
+    // Clear all previous errors
+    ["firstName", "lastName", "type", "message"].forEach(clearError);
+    
+    let isValid = true;
+    let firstErrorField = null;
+
+    // Get form values
+    let firstName = document.getElementById("firstName").value.trim();
+    let lastName = document.getElementById("lastName").value.trim();
+    const type = document.getElementById("type").value;
+    const message = document.getElementById("message").value.trim();
+
+    // If name fields are NOT readonly and are empty, use Google account names
+    if (!nameReadonly) {
+      if (!firstName && googleFirstName) {
+        firstName = googleFirstName;
+      }
+      if (!lastName && googleLastName) {
+        lastName = googleLastName;
+      }
+    }
+
+    // Validate First Name (only if not auto-populated from Google)
+    if (!firstName) {
+      showError("firstName", "Please enter your first name");
+      isValid = false;
+      if (!firstErrorField) firstErrorField = document.getElementById("firstName");
+    }
+
+    // Validate Last Name (only if not auto-populated from Google)
+    if (!lastName) {
+      showError("lastName", "Please enter your last name");
+      isValid = false;
+      if (!firstErrorField) firstErrorField = document.getElementById("lastName");
+    }
+
+    // Validate Type
+    if (!type) {
+      showError("type", "Please select a type");
+      isValid = false;
+      if (!firstErrorField) firstErrorField = document.getElementById("type");
+    }
+
+    // Validate Message
+    if (!message) {
+      showError("message", "Please enter your message");
+      isValid = false;
+      if (!firstErrorField) firstErrorField = document.getElementById("message");
+    }
+
+    // Focus on first error field
+    if (!isValid) {
+      if (firstErrorField) {
+        firstErrorField.focus();
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    // Prepare data
+    const formData = {
+      "First Name": firstName,
+      "Last Name": lastName,
+      "Email": email,
+      "Type": type,
+      "Message": message,
+      "inDatabase": inDatabase
+    };
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(formData),
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        // Show success message
+        container.innerHTML = `
+          <div class="success-message">
+            <strong>✓ Thank you for contacting us!</strong><br>
+            <small>We've received your message and will get back to you soon.</small>
+          </div>
+          <p style="text-align:center;color:var(--muted);font-size:14px;">
+            Want to submit another message? <a href="#" onclick="location.reload();return false;" style="color:var(--accent);">Click here</a>
+          </p>
+        `;
+      } else {
+        alert("Error: " + res.error);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit";
+      }
+    })
+    .catch(err => {
+      console.error(err); 
+      alert("Submission failed. Please try again.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+    });
+  };
+}
+
+/* ================= GOOGLE SIGN-IN ================= */
+function onGoogle(res){
+  const payload = JSON.parse(atob(res.credential.split(".")[1]));
+  const email = payload.email;
+  const firstName = payload.given_name || "";
+  const lastName = payload.family_name || "";
+  
+  saveSession(email, firstName, lastName);
+  document.getElementById("login").style.display = "none";
+  loadForm(email, firstName, lastName);
+}
+
+function initializeGoogleSignIn() {
+  const sessionData = getSession();
+  
+  // Check if google object is available
+  if (typeof google !== 'undefined' && google.accounts) {
+    google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onGoogle });
+
+    if(sessionData){ 
+      document.getElementById("login").style.display = "none"; 
+      loadForm(sessionData.email, sessionData.firstName, sessionData.lastName); 
+    }
+    else {
+      document.getElementById("status").textContent = "Sign in to continue";
+      google.accounts.id.renderButton(document.getElementById("login"), { theme: "outline", size: "large" });
+    }
+  } else {
+    // Retry with exponential backoff, max 20 times
+    if (googleLoadRetries < MAX_GOOGLE_RETRIES) {
+      googleLoadRetries++;
+      document.getElementById("status").textContent = "Loading Google Sign-In...";
+      setTimeout(initializeGoogleSignIn, 100);
+    } else {
+      // Failed to load after max retries
+      document.getElementById("status").textContent = "Failed to load Google Sign-In. Please refresh the page.";
+      document.getElementById("login").innerHTML = `
+        <p style="color:var(--muted);font-size:14px;">
+          Unable to load authentication. Please check your internet connection and 
+          <a href="#" onclick="location.reload();return false;" style="color:var(--accent);">refresh the page</a>.
+        </p>
+      `;
+    }
+  }
+}
+
+window.onload = initializeGoogleSignIn;
+</script>
+
+</body>
+</html>
