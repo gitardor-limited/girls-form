@@ -9,7 +9,7 @@
   
 <style>
 :root {
-  --accent:#1a73e8;
+  --accent:#e90148;
   --bg:#f7f9fc;
   --card:#ffffff;
   --border:#e6e9ef;
@@ -77,7 +77,7 @@ form input.error, form select.error, form textarea.error {
 form input:focus, form select:focus, form textarea:focus {
   outline:none;
   border-color:var(--accent);
-  box-shadow:0 0 0 3px rgba(26,115,232,0.1);
+  box-shadow:0 0 0 3px rgba(233,1,72,0.1);
 }
 
 form button { 
@@ -510,7 +510,7 @@ function initializeGoogleSignIn() {
       document.getElementById("login").innerHTML = `
         <p style="color:var(--muted);font-size:14px;">
           Unable to load authentication. Please check your internet connection and 
-          <a href="#" onclick="location.reload();return false;" style="color:var(--accent);">refresh the page</a>.
+          <a href="#" onclick="location.reload();return false;" style="color:var(--accent);">refresh the page</a>
         </p>
       `;
     }
